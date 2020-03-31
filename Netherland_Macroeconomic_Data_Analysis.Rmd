@@ -1,0 +1,208 @@
+---
+title: "Forecast about Unemployment, Inflation and GDP for Netherland"
+knit: (function(input_file, encoding) {
+  out_dir <- 'docs';
+  rmarkdown::render(input_file,
+ encoding=encoding,
+ output_file=file.path(dirname(input_file), out_dir, 'index.html'))})
+ 
+author: "Misra Sonam"
+date: "3/22/2020"
+
+output: html_document
+---
+
+## Install libraries
+
+```{r warning=FALSE,message=FALSE}
+library(tidyverse)
+library(readxl)
+library(corrgram)
+library(tseries)
+library(urca)
+library(forecast)
+library(trend)
+library(zoo)
+library(reshape)
+
+```
+## Read Data
+
+```{r}
+Unemployment<-read_excel("/Users/sonam/Desktop/Regression_data/MacroData.xlsx",sheet="Sheet2")
+Inflation<-read_excel("/Users/sonam/Desktop/Regression_data/MacroData.xlsx",sheet="Sheet3")
+GDP<-read_excel("/Users/sonam/Desktop/Regression_data/MacroData.xlsx",sheet="Sheet7")
+```
+
+## Data Preparation
+
+```{r}
+## Select variables from the larger dataset
+
+Year<-Unemployment[1,c('Column6','Column7','Column8','Column9','Column10','Column11','Column12','Column13','Column14','Column15','Column16','Column17','Column18','Column19','Column20','Column21','Column22','Column23','Column24','Column25','Column26','Column27','Column28','Column29','Column30','Column31','Column32','Column33','Column34','Column35','Column36','Column37','Column38','Column39','Column40','Column41','Column42','Column43','Column44','Column45','Column46','Column47','Column48','Column49','Column50','Column51','Column52','Column53','Column54','Column55','Column56','Column57','Column58','Column59','Column60','Column61','Column62','Column63','Column64')]
+
+
+NetherlandUn<-Unemployment[427,c('Column6','Column7','Column8','Column9','Column10','Column11','Column12','Column13','Column14','Column15','Column16','Column17','Column18','Column19','Column20','Column21','Column22','Column23','Column24','Column25','Column26','Column27','Column28','Column29','Column30','Column31','Column32','Column33','Column34','Column35','Column36','Column37','Column38','Column39','Column40','Column41','Column42','Column43','Column44','Column45','Column46','Column47','Column48','Column49','Column50','Column51','Column52','Column53','Column54','Column55','Column56','Column57','Column58','Column59','Column60','Column61','Column62','Column63','Column64')]
+
+
+NetherlandInf<-Inflation[1092,c('Column6','Column7','Column8','Column9','Column10','Column11','Column12','Column13','Column14','Column15','Column16','Column17','Column18','Column19','Column20','Column21','Column22','Column23','Column24','Column25','Column26','Column27','Column28','Column29','Column30','Column31','Column32','Column33','Column34','Column35','Column36','Column37','Column38','Column39','Column40','Column41','Column42','Column43','Column44','Column45','Column46','Column47','Column48','Column49','Column50','Column51','Column52','Column53','Column54','Column55','Column56','Column57','Column58','Column59','Column60','Column61','Column62','Column63','Column64')]
+
+
+NetherlandGDP<-GDP[552,c('Column6','Column7','Column8','Column9','Column10','Column11','Column12','Column13','Column14','Column15','Column16','Column17','Column18','Column19','Column20','Column21','Column22','Column23','Column24','Column25','Column26','Column27','Column28','Column29','Column30','Column31','Column32','Column33','Column34','Column35','Column36','Column37','Column38','Column39','Column40','Column41','Column42','Column43','Column44','Column45','Column46','Column47', 'Column48','Column49','Column50','Column51','Column52','Column53','Column54','Column55','Column56','Column57','Column58','Column59','Column60','Column61','Column62','Column63','Column64')]
+
+```
+
+
+
+```{r warning=FALSE,message=FALSE}
+## Select variables from the larger dataset
+
+t_NetherlandGDP<-t(NetherlandGDP)
+
+t_NetherlandGDP<-as.numeric(t_NetherlandGDP)
+
+
+
+t_NetherlandInf<-t(NetherlandInf)
+t_NetherlandInf<-as.numeric(t_NetherlandInf)
+
+
+
+t_NetherlandUnem<-t(NetherlandUn)
+t_NetherlandUnem<-as.numeric(t_NetherlandUnem)
+
+
+t_Year<-t(Year)
+t_Year<-as.numeric(t_Year)
+
+t_Year<-as.numeric(t_Year)
+t_NetherlandUnem<-as.numeric(t_NetherlandUnem)
+t_NetherlandGDP<-as.numeric(t_NetherlandGDP)
+t_NetherlandInf[is.na(t_NetherlandInf)] <-0
+t_NetherlandInf<-as.numeric(t_NetherlandInf)
+
+
+```
+```{r}
+# its still a vector
+TimeSeriesNetherland<-cbind(t_Year, t_NetherlandGDP, t_NetherlandInf, t_NetherlandUnem)
+
+
+# inorder to work with timeseries convert to dataframe
+TimeSeriesNetherland<-as.data.frame(TimeSeriesNetherland)
+
+
+TimeSeriesNetherland <- rename(TimeSeriesNetherland, c(t_Year="Years"))
+
+TimeSeriesNetherland <- rename(TimeSeriesNetherland, c(t_NetherlandGDP="GrossDP"))
+
+TimeSeriesNetherland <- rename(TimeSeriesNetherland, c(t_NetherlandInf="Inflation"))
+
+TimeSeriesNetherland <- rename(TimeSeriesNetherland, c(t_NetherlandUnem="Unemploy"))
+```
+
+```{r}
+#tell R this is time series data
+
+tsUR<-zoo(TimeSeriesNetherland$Unemploy, order.by = TimeSeriesNetherland$Years)
+
+tsIF<-zoo(TimeSeriesNetherland$Inflation, order.by = TimeSeriesNetherland$Years)
+
+tsGDP<-zoo(TimeSeriesNetherland$GrossDP, order.by = TimeSeriesNetherland$Years)
+```
+
+
+## create plots of the timeseries
+```{r}
+ggplot(data = TimeSeriesNetherland, aes(x = TimeSeriesNetherland$Years, y = TimeSeriesNetherland$GrossDP)) + geom_line()
+ggplot(data = TimeSeriesNetherland, aes(x = TimeSeriesNetherland$Years, y = TimeSeriesNetherland$Inflation))+ geom_line()
+ggplot(data = TimeSeriesNetherland, aes(x = TimeSeriesNetherland$Years, y = TimeSeriesNetherland$Unemploy))+ geom_line()
+```
+
+## Test for Stationarity
+
+## ADF Test
+
+* Time series work if underlying data is stationary.
+* Timeseries is said to be stationary if it has constant mean and variance and covariance is independent of time. To test the same, ADF test is performed. 
+
+```{r}
+adf.test(tsGDP) 
+adf.test(tsIF)
+adf.test(tsUR) 
+```
+
+* p-value > 0.05 for GPD, Inflation and Unemployment. Here, the we failed to reject null which means all three are non-stationary.
+* To test for trend stationarity, KPSS test is performed.
+
+## KPSS Test
+```{r}
+kpss.test(TimeSeriesNetherland$GrossDP, null = "Trend")
+kpss.test(TimeSeriesNetherland$Inflation, null = "Trend")
+kpss.test(TimeSeriesNetherland$Unemploy, null = "Trend")
+```
+* p-value < 0.05 for GDP and Unemployment. Here, we reject the null hypothesis, which means data is nonstationary.
+* P-value > 0.05 for inflation. Here, we fail to reject the null hypothesis, which means data for inflation is trend stationary.
+
+## Correlograms of Unemployment, Inflation and GDP data
+
+```{r}
+acf(tsUR)
+acf(tsIF)
+acf(tsGDP)
+
+pacf(tsUR)
+pacf(tsIF)
+pacf(tsGDP)
+```
+
+* After analyzing the above ACF and PACF plots, data is transformed by differencing to achieve stationarity as prediction can be performed on stationary data. Below is KPSS test which proves data for GDP and Unemployment has become trend stationary. 
+
+```{r}
+YearDiff=diff(TimeSeriesNetherland$Years,differences=4)
+URdiff=diff(tsUR, differences=2 )
+GDPdiff=diff(tsGDP)
+GDPdiff=diff(tsGDP,differences=2)
+
+plot(GDPdiff)
+```
+
+## ACF / PACF Plots After Differencing
+
+```{r}
+kpss.test(URdiff, null = "Trend")
+kpss.test(GDPdiff, null = "Trend")
+
+
+acf(tsIF)
+acf(URdiff)
+acf(GDPdiff)
+
+
+pacf(tsIF)
+pacf(URdiff)
+pacf(GDPdiff)
+```
+
+## Model for Inflation, Unemployment and GDP: 
+
+*On analyzing the ACF and PACF for Inflation it is clearly observed that the ACF trails off and PACF has a hard cutoff which indicates that it is an Auto Regressive model with lag 1. This observation is further analyzed by running the model and observing the least AIC. 
+
+```{r}
+UmData <- Arima(URdiff, order = c(0, 1, 2),
+                include.mean = FALSE, include.drift = FALSE, include.constant =FALSE,
+                method = "ML")
+InfData <- Arima(tsIF, order = c(2, 0, 0),
+                 include.mean = FALSE, include.drift = FALSE, include.constant =FALSE,
+                 method = "ML")
+GDPData <- Arima(GDPdiff, order = c(0, 1, 2),
+                 include.mean = FALSE, include.drift = FALSE, include.constant =FALSE,
+                 method = "ML")
+
+par(mfrow=c(2,2))
+
+plot(forecast(UmData,h=10), main="Forecast for Unemployment")
+plot(forecast(InfData,h=10), main="Forecast for Inflation")
+plot(forecast(GDPData,h=10), main="Forecast for GDP")
+```
+
